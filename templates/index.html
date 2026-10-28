@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wordle Letter Counts and Patterns Demo</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .data { border-collapse: collapse; width: 50%; }
+        .data th, .data td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .data th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Wordle Patterns and Counts as of {{last_date}}</h1>
+    <p>Freezing changes to data display. Will continue to update data and add updates for bug fixes if any</p>
+    <p>Work in progress for analyzing the counts</p>
+    <a href="https://github.com/lalitha2019/wordle_web_project">Backend code for webscraping, parsing and preparing data</a>
+    <p></p>
+    <a href="https://github.com/lalitha2019/wordle_web_project_demo4">Code for the most recent version</a>
+    <p></p>
+    <a href="https://github.com/lalitha2019/">My Github profile (includes code for other hobby projects as well as previous versions of this project)</a>
+
+    <p></p>
+        <label for="year_select">Choose a year:</label>
+	        <select name="year_select" id="year_select" required>
+  		    <option value="" selected disabled>-- Select an option --</option>
+	        </select>
+        <label for="month_select">Choose a month:</label>
+	        <select name="month_select" id="month_select">
+  		    <option value="" selected disabled>-- Select an option --</option>
+	        </select>
+        <p></p>
+        <button type="button" name="submit_selection" id="submit_selection" onclick="show_vals()">Show the counts for the current selection</button>
+        <button type="button" name="clear_selection" id="clear_selection" onclick="window.location.reload()">Clear selection and show counts for all time</button>
+        <p></p>
+    <h2 id="counts_header">Counts for all answers</h2>
+    <p>Please click on any button to show the corresponding visualization</p>
+    <!-- The '| safe' filter tells Flask not to escape the HTML tags -->
+     <div name="show_table" id="show_table">
+        {{ table_var | safe }}
+    </div>
+
+    <script>
+     // 1. Define your data array
+    const year_vals = JSON.parse('{{years | tojson}}')
+    const month_vals = JSON.parse('{{months | tojson}}')
+    const letter_vals = JSON.parse('{{letters | tojson}}')
+    const year_select_element = document.getElementById("year_select");
+    const month_select_element = document.getElementById("month_select");
+
+    function populate_options(select_element, options_list) {
+        // Clear existing dynamic options (keeping the placeholder index 0)
+	    select_element.length = 1;
+
+        //loop through options_list
+        options_list.forEach(option_val => {
+ 		const option = document.createElement("option");
+
+        // Assign value and text content
+ 		option.value = option_val
+		option.textContent = option_val;
+
+        // Append the option to the dropdown list
+		select_element.appendChild(option);
+        });
+    }
+    populate_options(year_select_element,year_vals)
+    populate_options(month_select_element, month_vals)
+
+    year_select_element.addEventListener("change",
+            function() {
+                const selected_year = year_select_element.value
+                if(selected_year == '2021') {
+                   populate_options(month_select_element, month_vals.slice(5,))
+                } else {populate_options(month_select_element, month_vals)}
+            })
+
+    function show_vals() {
+        const button_element = document.getElementById("submit_selection")
+        const data_to_send = {'year': year_select_element.value,
+                                'month': month_select_element.value};
+
+                fetch('/api/show_selected', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data_to_send)
+                })
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log('Success');
+                    document.getElementById('show_table').innerHTML =  data.table;
+                    document.getElementById('counts_header').innerHTML = "Counts for " + year_select_element.value + " " +month_select_element.value
+                })
+                .catch(error => console.error('Error sending data: ', error));
+            }
+
+    function show_position_graph(position_name) {
+        const data_to_send = {'position_name': position_name};
+                fetch('/api/get_position', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data_to_send)
+                })
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log('Success');
+                    //alert(data.position)
+                })
+                .catch(error => console.error('Error sending data: ', error));
+                window.location.href='graph_counts'
+            }
+
+        function show_letter_graph(letter_name) {
+        const data_to_send = {'letter_name': letter_name};
+                fetch('/api/get_letter', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data_to_send)
+                })
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log('Success');
+                    //alert(data.letter)
+                })
+                .catch(error => console.error('Error sending data: ', error));
+                window.location.href='graph_counts'
+            }
+
+    </script>
+</body>
+</html>
