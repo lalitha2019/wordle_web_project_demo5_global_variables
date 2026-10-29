@@ -27,7 +27,7 @@ column_names = [f"<button type='button' onclick=\"show_position_graph('{position
 
 
 app = Flask(__name__)
-app.secret_key = 'LG-Wordle-Counts-101'
+#app.secret_key = 'LG-Wordle-Counts-101'
 
 #--------------------------------------------------------------------
 # Functions
