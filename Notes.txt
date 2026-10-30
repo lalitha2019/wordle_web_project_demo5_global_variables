@@ -16,5 +16,7 @@ When a position button is clicked, it shows the graph for the counts of the lett
 --------------------------------
 After testing on PythonAnywhere:
 --------------------------------
-session variables seem to have caused confusion which was not visible when running locally.
+1. session variables seem to have caused confusion which was not visible when running locally.
 So, used global variables instead of session variables.
+
+2. Because there is currently no button for showing a graph of 'all' counts, removed the code under if condition where position_name and letter_name are both not set and replaced it with 'pass'. This will hpefully eliminate the problem of the unpredictable situation when after refresh, or after closing and opening the page sometimes, the graph of all counts (for the previous selection / no selection) is showing in place of selected position or letter.

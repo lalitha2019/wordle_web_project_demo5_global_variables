@@ -1,6 +1,6 @@
 import base64
 from io import BytesIO
-from flask import Flask, render_template, request, session, jsonify
+from flask import Flask, render_template, request, jsonify
 
 # CRITICAL FOR PYTHONANYWHERE: Use the non-interactive Agg backend
 import matplotlib
@@ -14,13 +14,15 @@ import wordle_counts as wc
 #--------------------------------------------------------------------
 # Initial set up
 #--------------------------------------------------------------------
-
 answers = wc.get_all_answers()
-letter_counts = wc.get_letter_counts(answers)
-years = wc.get_years()
+global_vals = {
+    'answers' : answers,
+    'letter_counts' : wc.get_letter_counts(answers),
+    'position_name' : None,
+    'letter_name' : None
+}
 
-position_name = None
-letter_name = None
+years = wc.get_years()
 
 index_names = [f"<button type='button' onclick=\"show_letter_graph('{letter_name}')\">{letter_name}</button>" for letter_name in wc.letters]
 column_names = [f"<button type='button' onclick=\"show_position_graph('{position_name}')\">{position_name}</button>" for position_name in wc.positions]
@@ -55,8 +57,14 @@ def plot_graph(x_values, y_values, plot_title):
     return plot_base64
 
 def show_all_counts():
+    #reload is not clearing the values. So, trying to set thse golbal variables explicitly here as well.
+    global_vals['answers'] =  wc.get_all_answers()
+    global_vals['letter_counts'] = wc.get_letter_counts(global_vals['answers'])
+    global_vals['position_name'] = None
+    global_vals['letter_name'] = None
 
-    df = pd.DataFrame(letter_counts, index=index_names, columns=column_names)
+    df = pd.DataFrame(global_vals['letter_counts'], index=index_names, columns=column_names)
+    #df.index.name = 'All'
     table_html = df.to_html(escape=False, classes='data')
     return table_html
 
@@ -70,25 +78,21 @@ def index():
 
 @app.route('/api/show_selected', methods=['POST'])
 def show_selected():
-    global position_name
-    position_name = None
-    global letter_name
-    letter_name = None
 
-    global answers
-    global letter_counts
+    global_vals['position_name'] = None
+    global_vals['letter_name'] = None
 
     data = request.get_json()
     year = data['year']
     month = data['month']
 
     if month == "":
-        answers = wc.get_answers_for_year(int(year))
-        letter_counts = wc.get_letter_counts(answers)
+        global_vals['answers'] = wc.get_answers_for_year(int(year))
+        global_vals['letter_counts'] = wc.get_letter_counts(global_vals['answers'])
     else:
-        letter_counts = wc.get_counts_by_month_for_year(int(year), month)
+        global_vals['letter_counts'] = wc.get_counts_by_month_for_year(int(year), month)
 
-    df = pd.DataFrame(letter_counts, index=index_names, columns=column_names)
+    df = pd.DataFrame(global_vals['letter_counts'], index=index_names, columns=column_names)
     table_html = df.to_html(escape=False, classes='data')
 
     return jsonify({'table': table_html})
@@ -96,44 +100,42 @@ def show_selected():
 @app.route('/api/get_position', methods=['POST'])
 def get_position():
     data = request.get_json()
-    global position_name
-    position_name = data['position_name']
-    global letter_name
-    letter_name = None
-    return jsonify({'result':'success', 'position': session['position_name']})
+    global_vals['position_name'] = data['position_name']
+    global_vals['letter_name'] = None
+    return jsonify({'result':'success', 'position': global_vals['position_name']})
 
 @app.route('/api/get_letter', methods=['POST'])
 def get_letter():
     data = request.get_json()
-    global letter_name
-    letter_name = data['letter_name']
-    global position_name
-    position_name = None
-    return jsonify({'result': 'success', 'letter': session['letter_name']})
+    global_vals['letter_name'] = data['letter_name']
+    global_vals['position_name'] = None
+    return jsonify({'result': 'success', 'letter': global_vals['letter_name']})
 
 @app.route('/graph_counts', methods=['GET'])
 def graph_counts():
 
-    if(position_name == "" or position_name == None) and (letter_name == "" or letter_name == None):
+    if(global_vals['position_name'] == "" or global_vals['position_name'] == None) and (global_vals['letter_name'] == "" or global_vals['letter_name'] == None):
+        '''
         #x_values = letters
         #y_values = sum of counts of all positions for each letter
         x_values = wc.letters
-        y_values = [sum(item) for item in letter_counts]
-        plot_title = f"Total Number of times a letter appeared in answers since June 2019"
-    elif(position_name != "" and position_name!= None):
+        y_values = [sum(item) for item in global_vals['letter_counts']]
+        plot_title = f"Total Number of times a letter appeared in answers since June 2019" '''
+        pass
+    elif (global_vals['position_name']  != "" and global_vals['position_name'] != None):
         #x_values = letters
         #y_values = letter counts for [position_name index] for each letter
-        position = wc.positions.index(position_name)
+        position = wc.positions.index(global_vals['position_name'] )
         x_values = wc.letters
-        y_values = [item[position] for item in letter_counts]
-        plot_title = f"Number of times a letter appeared in the {position_name} place"
-    elif(letter_name != None):
+        y_values = [item[position] for item in global_vals['letter_counts']]
+        plot_title = f"Number of times a letter appeared in the {global_vals['position_name'] } place"
+    elif(global_vals['letter_name'] != None and global_vals['letter_name'] != ""):
         #x_values = position names
         #y_values = letter counts for the letter for each position
-        letter_index = wc.letters.index(letter_name)
+        letter_index = wc.letters.index(global_vals['letter_name'])
         x_values = wc.positions
-        y_values = letter_counts[letter_index]
-        plot_title = f"Number of times letter {letter_name} appeared in each of the 5 places"
+        y_values = global_vals['letter_counts'][letter_index]
+        plot_title = f"Number of times letter {global_vals['letter_name']} appeared in each of the 5 places"
     else:
         #error
         pass
